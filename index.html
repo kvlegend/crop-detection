@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- SEO Optimization -->
+  <title>AgriCNN: Real-Time Crop Disease Detection via Convolutional Neural Networks</title>
+  <meta name="description" content="An interactive, in-browser Convolutional Neural Network (CNN) crop disease classifier using TensorFlow.js. Train models, visualize feature activation maps, and inspect agricultural recommendations.">
+  <meta name="keywords" content="CNN, Crop Disease Detection, Deep Learning, TensorFlow.js, In-browser Neural Network, Tomato Late Blight, Corn Rust, Smart Farming, Computer Vision">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       Navigation Header
+       ========================================== -->
+  <header class="nav-bar" id="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <i data-lucide="sprout" class="brand-accent"></i>
+        <span>Agri<span class="brand-accent">CNN</span></span>
+      </a>
+      
+      <nav class="nav-links">
+        <a href="#workbench" class="nav-link active">Workbench</a>
+        <a href="#training" class="nav-link">Model Training</a>
+        <a href="#explainer" class="nav-link">CNN Architecture</a>
+        <a href="#library" class="nav-link">Disease Library</a>
+      </nav>
+      
+      <div class="nav-actions">
+        <span class="pill pill-green-dark">
+          <i data-lucide="cpu" style="width: 12px; height: 12px;"></i> In-Browser Inference Active
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       Hero Section
+       ========================================== -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span>Deep Learning for Modern Agriculture</span>
+      </div>
+      <h1 class="display-xxl hero-title">
+        Detect Crop Diseases Instantly with In-Browser Computer Vision
+      </h1>
+      <p class="body-lg hero-subtitle">
+        AgriCNN executes a fully client-side Convolutional Neural Network (CNN) in real-time. Scan crop leaf images, visualize layer-by-layer feature maps, and inspect developer-grade diagnostics and treatment advice without sending data to any server.
+      </p>
+      <div style="display: flex; gap: 16px; justify-content: center;">
+        <a href="#workbench" class="btn btn-primary">
+          <i data-lucide="play"></i> Launch Workbench
+        </a>
+        <a href="#training" class="btn btn-secondary">
+          <i data-lucide="sliders"></i> Open Sandbox Trainer
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       Main Workbench Workspace
+       ========================================== -->
+  <section class="section section-soft" id="workbench">
+    <div class="container">
+      
+      <div class="workbench-grid">
+        
+        <!-- Left Panel: Input & Presets -->
+        <div class="workbench-panel">
+          <div class="card">
+            <div class="panel-title-bar">
+              <h2 class="heading-lg">Leaf Input Source</h2>
+              <i data-lucide="image" class="brand-accent" style="width: 18px;"></i>
+            </div>
+            <p class="body-md" style="margin-bottom: 16px; color: var(--ink-mute);">
+              Select a preset diseased/healthy crop leaf to scan, or upload your own leaf image.
+            </p>
+
+            <!-- Presets Grid -->
+            <div class="preset-grid" id="preset-grid">
+              <div class="preset-card active" data-disease="tomato_blight">
+                <img src="assets/tomato_late_blight.png" alt="Tomato Late Blight" class="preset-thumb">
+                <span class="preset-label">Tomato Blight</span>
+              </div>
+              <div class="preset-card" data-disease="corn_rust">
+                <img src="assets/corn_common_rust.png" alt="Corn Common Rust" class="preset-thumb">
+                <span class="preset-label">Corn Rust</span>
+              </div>
+              <div class="preset-card" data-disease="apple_scab">
+                <img src="assets/apple_scab.png" alt="Apple Scab" class="preset-thumb">
+                <span class="preset-label">Apple Scab</span>
+              </div>
+              <div class="preset-card" data-disease="grape_rot">
+                <img src="assets/grape_black_rot.png" alt="Grape Black Rot" class="preset-thumb">
+                <span class="preset-label">Grape Rot</span>
+              </div>
+              <div class="preset-card" data-disease="healthy_leaf" style="grid-column: 1 / -1;">
+                <img src="assets/healthy_leaf.png" alt="Healthy Leaf" class="preset-thumb" style="width: 48px; height: 48px;">
+                <span class="preset-label">Healthy Leaf Control</span>
+              </div>
+            </div>
+
+            <div style="margin: 20px 0; text-align: center; font-size: 13px; color: var(--ink-mute-2); font-weight: 500;">
+              — OR —
+            </div>
+
+            <!-- Upload Area -->
+            <div class="upload-area" id="upload-dropzone">
+              <i data-lucide="upload-cloud" class="upload-icon" style="width: 36px; height: 36px;"></i>
+              <div style="font-size: 14px; font-weight: 600; color: var(--ink);">Drag leaf image here</div>
+              <div class="caption">Supports PNG, JPG, or JPEG</div>
+              <button class="btn btn-secondary" style="margin-top: 8px; font-size: 12px; padding: 6px 12px;">
+                Browse Files
+              </button>
+              <input type="file" id="file-uploader" class="file-input" accept="image/*">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Center Panel: CNN Layer Pipeline Visualizer -->
+        <div class="pipeline-column">
+          <div class="card card-dark pipeline-card" id="pipeline-panel">
+            <div class="panel-title-bar">
+              <h2 class="heading-lg" style="color: var(--on-dark);">Inference Pipeline & Feature Activation Maps</h2>
+              <span class="pill pill-green-dark">CNN Visualizer</span>
+            </div>
+            
+            <div class="pipeline-flow">
+              
+              <!-- Input Layer (128x128x3) -->
+              <div class="pipeline-node active" id="node-input">
+                <div class="scanner-overlay" id="scanner-line"></div>
+                <div class="node-meta">
+                  <div class="node-label">INPUT LAYER (Crop Leaf Image)</div>
+                  <div class="node-dim">64 × 64 × 3</div>
+                </div>
+                <div class="canvas-container">
+                  <canvas id="input-canvas" width="128" height="128" style="border-radius: var(--radius-sm); border: 1px solid var(--hairline-dark); background-color: #000; width: 128px; height: 128px;"></canvas>
+                </div>
+                <div class="node-info-text">
+                  The raw leaf photo is resized and normalized into a tensor representing RGB channels.
+                </div>
+              </div>
+
+              <!-- Conv2D Layer 1 -->
+              <div class="pipeline-node" id="node-conv1">
+                <div class="node-meta">
+                  <div class="node-label">CONVOLUTIONAL LAYER 1 (ReLU Edge/Shape Detection)</div>
+                  <div class="node-dim">62 × 62 × 8 filters</div>
+                </div>
+                <div class="activation-grid" id="conv1-grid">
+                  <!-- 8 canvas thumbnails will be generated dynamically here -->
+                </div>
+                <div class="node-info-text">
+                  Eight 3x3 kernels extract primary edges, borders, color-intensity shifts, and lesion spot outlines.
+                </div>
+              </div>
+
+              <!-- Conv2D Layer 2 -->
+              <div class="pipeline-node" id="node-conv2">
+                <div class="node-meta">
+                  <div class="node-label">CONVOLUTIONAL LAYER 2 (ReLU Texture/Pattern Extraction)</div>
+                  <div class="node-dim">29 × 29 × 16 filters</div>
+                </div>
+                <div class="activation-grid" id="conv2-grid">
+                  <!-- 16 canvas thumbnails will be generated dynamically here -->
+                </div>
+                <div class="node-info-text">
+                  Subsequent convolution layers extract structural features, combining edges into complex spot textures and chlorosis shapes.
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Diagnosis & Metrics -->
+        <div class="workbench-panel">
+          <div class="card" id="diagnosis-panel">
+            <div class="panel-title-bar">
+              <h2 class="heading-lg">CNN Classification</h2>
+              <i data-lucide="clipboard-check" class="brand-accent" style="width: 18px;"></i>
+            </div>
+            
+            <div class="diag-info">
+              
+              <!-- Result Banner -->
+              <div class="treatment-card" id="prediction-banner" style="background-color: var(--canvas-soft); border-left: 4px solid var(--ink-mute-2); transition: all 0.3s ease;">
+                <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--ink-mute-2); letter-spacing: 0.05em; margin-bottom: 2px;">
+                  Classification Result
+                </div>
+                <div id="prediction-name" style="font-size: 20px; font-weight: 700; color: var(--ink);">
+                  No leaf loaded
+                </div>
+                <div id="prediction-pathogen" class="caption" style="font-style: italic; margin-top: 2px; color: var(--ink-mute-2);">
+                  Scientific classification
+                </div>
+              </div>
+
+              <!-- Class Probabilities List -->
+              <div class="prob-list" id="prob-list">
+                <!-- Tomato Late Blight Row -->
+                <div class="prob-row" data-class="0">
+                  <div class="prob-meta">
+                    <span class="prob-name">Tomato Late Blight</span>
+                    <span class="prob-val" id="prob-val-0">0.0%</span>
+                  </div>
+                  <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" id="prob-bar-0" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <!-- Corn Common Rust Row -->
+                <div class="prob-row" data-class="1">
+                  <div class="prob-meta">
+                    <span class="prob-name">Corn Common Rust</span>
+                    <span class="prob-val" id="prob-val-1">0.0%</span>
+                  </div>
+                  <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" id="prob-bar-1" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <!-- Apple Scab Row -->
+                <div class="prob-row" data-class="2">
+                  <div class="prob-meta">
+                    <span class="prob-name">Apple Scab</span>
+                    <span class="prob-val" id="prob-val-2">0.0%</span>
+                  </div>
+                  <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" id="prob-bar-2" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <!-- Grape Black Rot Row -->
+                <div class="prob-row" data-class="3">
+                  <div class="prob-meta">
+                    <span class="prob-name">Grape Black Rot</span>
+                    <span class="prob-val" id="prob-val-3">0.0%</span>
+                  </div>
+                  <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" id="prob-bar-3" style="width: 0%;"></div>
+                  </div>
+                </div>
+                <!-- Healthy Control Row -->
+                <div class="prob-row" data-class="4">
+                  <div class="prob-meta">
+                    <span class="prob-name">Healthy Leaf Control</span>
+                    <span class="prob-val" id="prob-val-4">0.0%</span>
+                  </div>
+                  <div class="prob-bar-bg">
+                    <div class="prob-bar-fill" id="prob-bar-4" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Treatment Plans -->
+              <div class="treatment-section" id="treatment-section" style="display: none;">
+                <div class="treatment-title">
+                  <i data-lucide="shield-alert" style="width: 16px; color: var(--accent-tomato);"></i>
+                  <span>Organic Treatment Protocol</span>
+                </div>
+                <div class="treatment-card">
+                  <div class="treatment-body" id="treatment-organic">
+                    Organic recommendations...
+                  </div>
+                </div>
+                
+                <div class="treatment-title" style="margin-top: 8px;">
+                  <i data-lucide="droplet" style="width: 16px; color: var(--accent-blue);"></i>
+                  <span>Chemical Treatment Protocol</span>
+                </div>
+                <div class="treatment-card">
+                  <div class="treatment-body" id="treatment-chemical">
+                    Chemical recommendations...
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       Interactive CNN Training Sandbox
+       ========================================== -->
+  <section class="section section-dark" id="training">
+    <div class="container">
+      
+      <div style="max-width: 800px; margin: 0 auto 48px auto; text-align: center;">
+        <span class="pill pill-green-dark" style="margin-bottom: 16px;">CNN SANDBOX INTERACTIVE TRAINER</span>
+        <h2 class="display-lg" style="margin-bottom: 16px; color: var(--on-dark);">
+          Train the CNN Live in Your Browser
+        </h2>
+        <p class="body-lg" style="color: var(--ink-mute-2);">
+          Adjust model hyperparameters below, generate a synthetic leaf training dataset locally, and click "Train Model" to watch a Convolutional Neural Network compile and optimize in real-time.
+        </p>
+      </div>
+
+      <div class="card card-dark sandbox-card" style="max-width: 960px; margin: 0 auto;">
+        
+        <!-- Parameter Settings -->
+        <div class="params-grid">
+          <div class="param-input-box">
+            <label class="param-label" for="param-lr">Learning Rate</label>
+            <input type="number" id="param-lr" class="input-field" value="0.01" step="0.001" min="0.0001" max="0.1">
+          </div>
+          <div class="param-input-box">
+            <label class="param-label" for="param-epochs">Training Epochs</label>
+            <input type="number" id="param-epochs" class="input-field" value="15" step="1" min="1" max="100">
+          </div>
+          <div class="param-input-box">
+            <label class="param-label" for="param-batch">Batch Size</label>
+            <input type="number" id="param-batch" class="input-field" value="8" step="4" min="4" max="64">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <div class="caption" style="color: var(--ink-mute-2);">
+            <i data-lucide="info" style="width: 12px; height: 12px; display: inline; vertical-align: text-top; margin-right: 4px;"></i>
+            Generates 50 synthetic crop leaf feature templates to train weights in browser memory.
+          </div>
+          <button class="btn btn-primary" id="btn-train" style="font-weight: 600;">
+            <i data-lucide="play-circle"></i> Train CNN Model
+          </button>
+        </div>
+
+        <!-- Training Metrics & Progress -->
+        <div class="training-progress-box" id="training-progress" style="display: none;">
+          <div class="progress-header">
+            <div style="font-size: 14px; font-weight: 600;" id="training-status-text">Compiling Model...</div>
+            <div class="progress-metrics">
+              <div class="metric-item">Epoch: <span class="metric-val" id="metric-epoch">0/0</span></div>
+              <div class="metric-item">Loss: <span class="metric-val" id="metric-loss">0.000</span></div>
+              <div class="metric-item">Accuracy: <span class="metric-val" id="metric-acc">0.0%</span></div>
+            </div>
+          </div>
+          
+          <div class="train-progress-bar-bg">
+            <div class="train-progress-bar-fill" id="train-progress-bar"></div>
+          </div>
+
+          <!-- Charts Grid -->
+          <div class="chart-grid">
+            <div class="chart-wrapper">
+              <canvas id="loss-chart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="acc-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       CNN Architecture & Math Explainer
+       ========================================== -->
+  <section class="section" id="explainer">
+    <div class="container">
+      
+      <div style="max-width: 800px; margin-bottom: 56px;">
+        <span class="pill pill-green" style="margin-bottom: 16px;">Mathematical Blueprint</span>
+        <h2 class="display-lg" style="margin-bottom: 16px;">
+          Convolutional Neural Network Architecture
+        </h2>
+        <p class="body-lg" style="color: var(--ink-mute);">
+          This platform deploys a sequential deep computer vision pipeline. Below is the step-by-step breakdown of how the image values transition from raw pixels into semantic disease classification.
+        </p>
+      </div>
+
+      <div class="arch-grid">
+        <!-- Input Step -->
+        <div class="arch-card">
+          <div class="arch-step-num">01</div>
+          <div class="arch-step-title">Normalizing Input</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            The 64x64 pixel image has RGB channel integers [0, 255] scaled to decimals [0, 1].
+          </p>
+          <div class="arch-step-math">x<sub>norm</sub> = x / 255.0</div>
+        </div>
+
+        <!-- Conv2D Step -->
+        <div class="arch-card">
+          <div class="arch-step-num">02</div>
+          <div class="arch-step-title">Convolution (Conv2D)</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            Slide weight kernels over pixels to calculate dot products, isolating edge and texture features.
+          </p>
+          <div class="arch-step-math">f(x) = (w * x) + b</div>
+        </div>
+
+        <!-- ReLU Activation -->
+        <div class="arch-card">
+          <div class="arch-step-num">03</div>
+          <div class="arch-step-title">Activation (ReLU)</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            Applies Rectified Linear Unit activation to replace negative values with zero, introducing non-linearity.
+          </p>
+          <div class="arch-step-math">f(x) = max(0, x)</div>
+        </div>
+
+        <!-- MaxPooling -->
+        <div class="arch-card">
+          <div class="arch-step-num">04</div>
+          <div class="arch-step-title">Max Pooling 2D</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            Aggregates 2x2 grids, selecting the maximum local signal. Reduces parameters and increases spatial invariance.
+          </p>
+          <div class="arch-step-math">pool(x) = max(X<sub>2x2</sub>)</div>
+        </div>
+
+        <!-- Fully Connected -->
+        <div class="arch-card">
+          <div class="arch-step-num">05</div>
+          <div class="arch-step-title">Dense & Dropout</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            Flattens spatial dimensions into a single vector, mapping combinations to fully-connected layers.
+          </p>
+          <div class="arch-step-math">y = σ(W · x + b)</div>
+        </div>
+
+        <!-- Softmax Classification -->
+        <div class="arch-card">
+          <div class="arch-step-num">06</div>
+          <div class="arch-step-title">Softmax Output</div>
+          <p class="caption" style="margin-bottom: 10px;">
+            Normalizes outputs into a probability distribution over the five crop disease classes.
+          </p>
+          <div class="arch-step-math">P(y=i) = e<sup>z_i</sup> / ∑e<sup>z_j</sup></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       Disease Catalog & Reference Library
+       ========================================== -->
+  <section class="section catalog-section" id="library">
+    <div class="container">
+      
+      <div style="max-width: 800px; margin: 0 auto 56px auto; text-align: center;">
+        <span class="pill pill-green" style="margin-bottom: 16px;">Reference Manual</span>
+        <h2 class="display-lg" style="margin-bottom: 16px;">
+          Crop Disease & Pathogen Database
+        </h2>
+        <p class="body-lg" style="color: var(--ink-mute);">
+          Review the structural characteristics, pathogen classifications, and visual patterns of standard crop leaf anomalies.
+        </p>
+      </div>
+
+      <div class="card-grid">
+        
+        <!-- Tomato Late Blight -->
+        <div class="card catalog-card">
+          <img src="assets/tomato_late_blight.png" alt="Tomato Late Blight" class="catalog-card-image">
+          <div class="card-feature-header" style="margin-bottom: 6px;">
+            <span class="pill pill-red">Fungal Pathogen</span>
+          </div>
+          <h3 class="heading-md" style="margin-bottom: 4px;">Tomato Late Blight</h3>
+          <div class="catalog-pathogen">Phytophthora infestans</div>
+          <p class="caption" style="color: var(--ink-mute); line-height: 1.5;">
+            Produces dark, water-soaked irregular spots on leaf surfaces. Rapidly spreads in cool, moist climates, leading to complete plant collapse.
+          </p>
+        </div>
+
+        <!-- Corn Common Rust -->
+        <div class="card catalog-card">
+          <img src="assets/corn_common_rust.png" alt="Corn Common Rust" class="catalog-card-image">
+          <div class="card-feature-header" style="margin-bottom: 6px;">
+            <span class="pill pill-red">Fungal Pathogen</span>
+          </div>
+          <h3 class="heading-md" style="margin-bottom: 4px;">Corn Common Rust</h3>
+          <div class="catalog-pathogen">Puccinia sorghi</div>
+          <p class="caption" style="color: var(--ink-mute); line-height: 1.5;">
+            Forms powdery, golden-brown to red pustules on both leaf surfaces. Leads to early leaf death and decreases crop yield significantly.
+          </p>
+        </div>
+
+        <!-- Apple Scab -->
+        <div class="card catalog-card">
+          <img src="assets/apple_scab.png" alt="Apple Scab" class="catalog-card-image">
+          <div class="card-feature-header" style="margin-bottom: 6px;">
+            <span class="pill pill-red">Ascomycete Fungal</span>
+          </div>
+          <h3 class="heading-md" style="margin-bottom: 4px;">Apple Scab</h3>
+          <div class="catalog-pathogen">Venturia inaequalis</div>
+          <p class="caption" style="color: var(--ink-mute); line-height: 1.5;">
+            Creates olive-green to dark brown circular spots with velvety margins. Causes leaves to warp, yellow, and drop prematurely, damaging fruit.
+          </p>
+        </div>
+
+        <!-- Grape Black Rot -->
+        <div class="card catalog-card">
+          <img src="assets/grape_black_rot.png" alt="Grape Black Rot" class="catalog-card-image">
+          <div class="card-feature-header" style="margin-bottom: 6px;">
+            <span class="pill pill-red">Fungal Pathogen</span>
+          </div>
+          <h3 class="heading-md" style="margin-bottom: 4px;">Grape Black Rot</h3>
+          <div class="catalog-pathogen">Guignardia bidwellii</div>
+          <p class="caption" style="color: var(--ink-mute); line-height: 1.5;">
+            Develops small, circular reddish-brown leaf spots with distinct dark borders. Spreads to fruit bunches, drying them into hard, black mummies.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==========================================
+       Site Footer
+       ========================================== -->
+  <footer class="footer">
+    <div class="container">
+      
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="brand">
+            <i data-lucide="sprout" class="brand-accent"></i>
+            <span>Agri<span class="brand-accent">CNN</span></span>
+          </a>
+          <p class="caption footer-desc">
+            An open-source, serverless educational platform designed to teach the mechanics of Convolutional Neural Networks and computer vision in precision agriculture.
+          </p>
+        </div>
+        
+        <div class="footer-col">
+          <h4 class="footer-title">Workbench</h4>
+          <div class="footer-links">
+            <a href="#workbench" class="footer-link">Preset Leaf Scanners</a>
+            <a href="#workbench" class="footer-link">Custom Leaf Upload</a>
+            <a href="#pipeline-panel" class="footer-link">Feature Activation Mapping</a>
+            <a href="#diagnosis-panel" class="footer-link">Disease Diagnoses</a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-title">AI Engine</h4>
+          <div class="footer-links">
+            <a href="#training" class="footer-link">Interactive Sandbox</a>
+            <a href="#explainer" class="footer-link">Model Architecture</a>
+            <a href="#training" class="footer-link">TensorFlow.js Specs</a>
+            <a href="https://js.tensorflow.org" target="_blank" rel="noopener noreferrer" class="footer-link">TFJS Documentation</a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4 class="footer-title">Resources</h4>
+          <div class="footer-links">
+            <a href="#library" class="footer-link">Pathogen Database</a>
+            <a href="https://github.com/VoltAgent/awesome-design-md" target="_blank" rel="noopener noreferrer" class="footer-link">Supabase Design System</a>
+            <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer" class="footer-link">Lucide Icons</a>
+            <a href="https://chartjs.org" target="_blank" rel="noopener noreferrer" class="footer-link">Chart.js Library</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="caption">
+          &copy; 2026 AgriCNN Platform. Strictly client-side execution. Apache-2.0 License.
+        </p>
+        <p class="caption" style="display: flex; gap: 16px;">
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Terms of Service</a>
+        </p>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       Scripts Loader
+       ========================================== -->
+  <!-- Load TensorFlow.js, Chart.js, Lucide Icons, and local App logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.379.0/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
